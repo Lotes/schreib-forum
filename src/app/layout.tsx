@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Schreibforum-Tools",
-  description: "Werkyeuge für deine Textarbeit.",
+  title: "Schreib-Forum-Tools",
+  description: "Werkzeuge für deine Textarbeit.",
 };
 
 export default function RootLayout({
