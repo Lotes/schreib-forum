@@ -11,6 +11,7 @@ import { makeDiff } from "@sanity/diff-match-patch";
 import { TagNode, parse } from "@bbob/parser";
 
 export default function Home() {
+  const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState(1);
   const [oldText, setOldText] = useState("");
   const [newText, setNewText] = useState("");
@@ -106,10 +107,16 @@ export default function Home() {
                 <Button
                   className="w-1/2"
                   variant="contained"
-                  onClick={() => navigator.clipboard.writeText(diffText)}
+                  onClick={() => {
+                    setCopied(true);
+                    navigator.clipboard.writeText(diffText);
+                    setTimeout(() => {
+                      setCopied(false);
+                    }, 1000);
+                  }}
                   startIcon={<CopyAll />}
                 >
-                  BBCode
+                  {!copied?"Code":"Kopiert!"}
                 </Button>
               </Box>
             </Box>
