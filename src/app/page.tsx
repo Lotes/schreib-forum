@@ -7,14 +7,14 @@ import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
 import { useEffect, useState } from "react";
 import CopyAll from "@mui/icons-material/CopyAll";
-import { makeDiff } from "@sanity/diff-match-patch";
+import DiffMatchPatch from 'diff-match-patch';
 import { TagNode, parse } from "@bbob/parser";
 
 export default function Home() {
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState(1);
-  const [oldText, setOldText] = useState("");
-  const [newText, setNewText] = useState("");
+  const [tab, setTab] = useState(3);
+  const [oldText, setOldText] = useState("Alter Text!\nhahaha\nDumm dumm dumm");
+  const [newText, setNewText] = useState("Neuer Text.\nUnglaublich!\nhihihi\nDumm dumm dumm");
   const [diffText, setDiffText] = useState<string>("");
 
   const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -22,7 +22,11 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const diffs = makeDiff(oldText, newText);
+    const dmp = new DiffMatchPatch();
+    var a = dmp.diff_linesToChars_(oldText, newText);
+    var diffs = dmp.diff_main(a.chars1, a.chars2, false);
+    dmp.diff_charsToLines_(diffs, a.lineArray);
+    dmp.diff_cleanupSemantic(diffs);
     setDiffText(
       diffs
         .map(([type, content]) => {
@@ -39,7 +43,7 @@ export default function Home() {
   }, [oldText, newText]);
 
   return (
-    <div className="flex flex-col min-w-[50%] max-w-full h-full items-center justify-items-center p-8 gap-4 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="min-w-[50%] max-w-full h-full items-center justify-items-center p-8 gap-4 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <h1 className="text-4xl">Textdifferenz</h1>
       <main className="flex flex-col items-center w-full h-full">
         <Box className="w-full h-dvh border-gray-300 border-[1px] flex flex-col">
@@ -143,14 +147,15 @@ function BBCode({ bbCode }: { bbCode: string }) {
       {ast.map((a, index) => {
         switch (a.tag) {
           case "rot":
-            return <span key={index} className="bg-red-300 inline-block">{breakify(a.content!.toString())}</span>;
+            return <span key={index} className="bg-red-300 inline">{breakify(a.content!.toString())}</span>;
           case "gruen":
             return (
-              <span key={index} className="bg-green-300 inline-block">{breakify(a.content!.toString())}</span>
+              <span key={index} className="bg-green-300 inline">{breakify(a.content!.toString())}</span>
             );
           default:
+            console.log(a)
             return (
-              <span key={index} className="inline-block">{breakify(a as unknown as string)}</span>
+              <span key={index} className="inline">{breakify(a as unknown as string)}</span>
             );
         }
       })}
@@ -158,6 +163,42 @@ function BBCode({ bbCode }: { bbCode: string }) {
   );
 }
 
-function breakify(text:string) {
-  return <>{text.split(/\n/g).map((t, i) => <span key={i}>{t}<br/></span>)}</>;
+function breakify(text: string) {
+  console.log(text);
+  const parts: React.JSX.Element[] = [];
+  let index = 0;
+  while(index < text.length) {
+    const nextBreak = text.indexOf('\n', index);
+    if(nextBreak > -1) {
+      parts.push(<>{text.substring(index, nextBreak)}</>);
+      parts.push(<br/>);
+      index = nextBreak+1;
+    } else {
+      parts.push(<>{text.substring(index)}</>);
+      index = text.length;
+    }
+  }
+  return <>{parts}</>;
 }
+
+
+/*
+[table]
+[tr]
+[th]Name[/th]
+[th]Age[/th]
+[/tr]
+[tr]
+[td]John[/td]
+[td]65[/td]
+[/tr]
+[tr]
+[td]Gitte[/td]
+[td]40[/td]
+[/tr]
+[tr]
+[td]Sussie[/td]
+[td]19[/td]
+[/tr]
+[/table] 
+*/
