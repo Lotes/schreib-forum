@@ -17,11 +17,9 @@ type Row = {
 
 export default function Home() {
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState(3);
-  const [oldText, setOldText] = useState("Alter Text!\nhahaha\nDumm dumm dumm");
-  const [newText, setNewText] = useState(
-    "Neuer Text.\nUnglaublich!\nhihihi\nDumm dumm dumm"
-  );
+  const [tab, setTab] = useState(1);
+  const [oldText, setOldText] = useState("");
+  const [newText, setNewText] = useState("");
   const [diffText, setDiffText] = useState<string>("");
 
   const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -68,7 +66,7 @@ export default function Home() {
   return (
     <div className="min-w-[50%] w-full h-full items-center justify-items-center m-20 gap-4 font-[family-name:var(--font-geist-sans)]">
       <h1 className="text-4xl text-center">Textdifferenz</h1>
-      <main className="flex flex-col items-center w-full">
+      <main className="flex flex-col items-center w-full min-h-[50%]">
         <Box className="w-1/2 min-h-[50%] border-gray-300 border-[1px] flex flex-col">
           <Tabs value={tab} onChange={handleChange} className="w-full">
             <Tab label="Alter Text" value={1} />
@@ -76,9 +74,10 @@ export default function Home() {
             <Tab label="Vorschau" value={3} />
           </Tabs>
           {tab === 1 && (
-            <Box className="m-2 flex flex-col flex-grow items-end">
+            <Box className="m-2 flex flex-col flex-grow items-end min-h-[50%]">
               <textarea
                 className="w-full h-full"
+                rows={8}
                 placeholder="Bitte füge hier die alte Fassung deines Textes ein."
                 value={oldText}
                 onChange={(e) => setOldText(e.currentTarget.value)}
@@ -93,8 +92,9 @@ export default function Home() {
             </Box>
           )}
           {tab === 2 && (
-            <Box className="m-2 flex flex-grow flex-col">
+            <Box className="m-2 flex flex-grow flex-col min-h-[50%]">
               <textarea
+                rows={8}
                 className="w-full h-full"
                 placeholder="Bitte füge hier die neue Fassung deines Textes ein."
                 value={newText}
@@ -119,7 +119,7 @@ export default function Home() {
             </Box>
           )}
           {tab === 3 && (
-            <Box className="m-2 flex flex-grow flex-col">
+            <Box className="m-2 flex flex-grow flex-col min-h-[50%]">
               <div className="flex flex-col flex-grow">
                 <BBCode bbCode={diffText} />
               </div>
@@ -180,8 +180,8 @@ function BBCodeTag({node}: {node:TagNode}) {
     case "tr": return <tr><TreeContent content={node.content}/></tr>;
     case "td": return <td><TreeContent content={node.content}/></td>;
     case "th": return <th><TreeContent content={node.content}/></th>;
-    case "rot": return <span className="bg-red-500"><TreeContent content={node.content}/></span>;
-    case "gruen": return <span className="bg-green-500"><TreeContent content={node.content}/></span>;
+    case "rot": return <span className="text-red-500"><TreeContent content={node.content}/></span>;
+    case "gruen": return <span className="text-green-500"><TreeContent content={node.content}/></span>;
     default: return <TreeContent content={node.content}/>
   }
 }
