@@ -7,14 +7,21 @@ import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
 import { useEffect, useState } from "react";
 import CopyAll from "@mui/icons-material/CopyAll";
-import DiffMatchPatch from 'diff-match-patch';
+import * as Diff from "diff";
 import { TagNode, parse } from "@bbob/parser";
+
+type Row = {
+  oldCode: string;
+  newCode: string;
+}
 
 export default function Home() {
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState(3);
   const [oldText, setOldText] = useState("Alter Text!\nhahaha\nDumm dumm dumm");
-  const [newText, setNewText] = useState("Neuer Text.\nUnglaublich!\nhihihi\nDumm dumm dumm");
+  const [newText, setNewText] = useState(
+    "Neuer Text.\nUnglaublich!\nhihihi\nDumm dumm dumm"
+  );
   const [diffText, setDiffText] = useState<string>("");
 
   const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -22,31 +29,47 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const dmp = new DiffMatchPatch();
-    var a = dmp.diff_linesToChars_(oldText, newText);
-    var diffs = dmp.diff_main(a.chars1, a.chars2, false);
-    dmp.diff_charsToLines_(diffs, a.lineArray);
-    dmp.diff_cleanupSemantic(diffs);
-    setDiffText(
-      diffs
-        .map(([type, content]) => {
-          if (type < 0) {
-            return `[rot]${content}[/rot]`;
-          } else if (type > 0) {
-            return `[gruen]${content}[/gruen]`;
-          } else {
-            return content;
-          }
-        })
-        .join("")
-    );
+    const diffs = Diff.diffWords(oldText, newText);
+    let currentRow: Row = {
+      newCode: "",
+      oldCode: ""
+    };
+    const rows: Row[] = [currentRow];
+
+    function addPart(part0: string, added: boolean, removed: boolean) {
+      if (removed) {
+        currentRow.oldCode += `[rot]${part0}[/rot]`;
+      } else if (added) {
+        currentRow.newCode += `[gruen]${part0}[/gruen]`;
+      } else {
+        currentRow.oldCode += part0;
+        currentRow.newCode += part0;
+      }
+    }
+
+    for (const {added, removed, value} of diffs) {
+      const parts = value.split("\n");
+      addPart(parts[0], added, removed);
+      for(let index=1; index<parts.length; index++)  {
+        currentRow = {
+          newCode: "",
+          oldCode: "",
+        };
+        rows.push(currentRow);
+        addPart(parts[index], added, removed);
+      }
+    }
+
+    setDiffText(`[table][tr][th]Alter Text[/th][th]Neuer Text[/th][/tr]${rows.map(row => {
+      return `[tr][td]${row.oldCode}[/td][td]${row.newCode}[/td][/tr]`;
+    }).join("")}[/table]`);
   }, [oldText, newText]);
 
   return (
-    <div className="min-w-[50%] max-w-full h-full items-center justify-items-center p-8 gap-4 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <h1 className="text-4xl">Textdifferenz</h1>
-      <main className="flex flex-col items-center w-full h-full">
-        <Box className="w-full h-dvh border-gray-300 border-[1px] flex flex-col">
+    <div className="min-w-[50%] w-full h-full items-center justify-items-center m-20 gap-4 font-[family-name:var(--font-geist-sans)]">
+      <h1 className="text-4xl text-center">Textdifferenz</h1>
+      <main className="flex flex-col items-center w-full">
+        <Box className="w-1/2 min-h-[50%] border-gray-300 border-[1px] flex flex-col">
           <Tabs value={tab} onChange={handleChange} className="w-full">
             <Tab label="Alter Text" value={1} />
             <Tab label="Neuer Text" value={2} />
@@ -120,7 +143,7 @@ export default function Home() {
                   }}
                   startIcon={<CopyAll />}
                 >
-                  {!copied?"Code":"Kopiert!"}
+                  {!copied ? "Code" : "Kopiert!"}
                 </Button>
               </Box>
             </Box>
@@ -137,68 +160,36 @@ export default function Home() {
   );
 }
 
+function TreeContent({content}: {content: TagNode['content']}) {
+  if(content === null) {
+    return <></>;
+  } else if(Array.isArray(content)) {
+    return <>
+      {content.map((c, index) => <TreeContent key={index} content={c}/>)}
+    </>
+  } else switch(typeof content)   {
+    case "number":
+    case "string": return <>{content}</>;
+    case "object": return <BBCodeTag node={content as TagNode}/>;
+  }
+}
+
+function BBCodeTag({node}: {node:TagNode}) {
+  switch (node.tag) {
+    case "table": return <table className="w-full"><tbody><TreeContent content={node.content}/></tbody></table>;
+    case "tr": return <tr><TreeContent content={node.content}/></tr>;
+    case "td": return <td><TreeContent content={node.content}/></td>;
+    case "th": return <th><TreeContent content={node.content}/></th>;
+    case "rot": return <span className="bg-red-500"><TreeContent content={node.content}/></span>;
+    case "gruen": return <span className="bg-green-500"><TreeContent content={node.content}/></span>;
+    default: return <TreeContent content={node.content}/>
+  }
+}
+
 function BBCode({ bbCode }: { bbCode: string }) {
   const [ast, setAst] = useState<TagNode[]>([]);
   useEffect(() => {
-    setAst(parse(bbCode, { onlyAllowTags: ["gruen", "rot"] }));
+    setAst(parse(bbCode, { onlyAllowTags: ["gruen", "rot", "table", "tr", "td", "th"] }));
   }, [bbCode]);
-  return (
-    <Box className="">
-      {ast.map((a, index) => {
-        switch (a.tag) {
-          case "rot":
-            return <span key={index} className="bg-red-300 inline">{breakify(a.content!.toString())}</span>;
-          case "gruen":
-            return (
-              <span key={index} className="bg-green-300 inline">{breakify(a.content!.toString())}</span>
-            );
-          default:
-            console.log(a)
-            return (
-              <span key={index} className="inline">{breakify(a as unknown as string)}</span>
-            );
-        }
-      })}
-    </Box>
-  );
+  return <>{ast.map((n, i) => <BBCodeTag key={i} node={n}/>)}</> 
 }
-
-function breakify(text: string) {
-  console.log(text);
-  const parts: React.JSX.Element[] = [];
-  let index = 0;
-  while(index < text.length) {
-    const nextBreak = text.indexOf('\n', index);
-    if(nextBreak > -1) {
-      parts.push(<>{text.substring(index, nextBreak)}</>);
-      parts.push(<br/>);
-      index = nextBreak+1;
-    } else {
-      parts.push(<>{text.substring(index)}</>);
-      index = text.length;
-    }
-  }
-  return <>{parts}</>;
-}
-
-
-/*
-[table]
-[tr]
-[th]Name[/th]
-[th]Age[/th]
-[/tr]
-[tr]
-[td]John[/td]
-[td]65[/td]
-[/tr]
-[tr]
-[td]Gitte[/td]
-[td]40[/td]
-[/tr]
-[tr]
-[td]Sussie[/td]
-[td]19[/td]
-[/tr]
-[/table] 
-*/
